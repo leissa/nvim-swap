@@ -38,25 +38,55 @@ file.
 
 ## Install
 
-Neovim 0.11 or later. With [lazy.nvim](https://github.com/folke/lazy.nvim):
+Neovim 0.11 or later. Tree-sitter parsers come from wherever you already install
+them — there is no extra dependency.
 
-```lua
-{ dir = "~/projects/nvim-swap", opts = {} }
-```
+The plugin maps its keys as soon as it is loaded, so on every manager below the
+plugin alone is enough; `setup()` is optional and only needed to change
+something.
 
-or, once it is pushed:
+### [lazy.nvim](https://github.com/folke/lazy.nvim)
 
 ```lua
 { "leissa/nvim-swap", opts = {} }
 ```
 
-Note that adding the directory to `runtimepath` by hand does *not* work under
-lazy.nvim — it rebuilds `runtimepath` from its own list during startup and
-drops anything put there beforehand. Use a spec.
+### [vim.pack](https://neovim.io/doc/user/pack.html) (built in, Neovim 0.12+)
 
-`opts = {}` is enough; calling `setup()` is optional and only needed to change
-something. Tree-sitter parsers come from wherever you already install them —
-there is no extra dependency.
+```lua
+vim.pack.add({ "https://github.com/leissa/nvim-swap" })
+```
+
+### [mini.deps](https://github.com/echasnovski/mini.deps)
+
+```lua
+MiniDeps.add({ source = "leissa/nvim-swap" })
+```
+
+### [paq-nvim](https://github.com/savq/paq-nvim)
+
+```lua
+require("paq")({ "leissa/nvim-swap" })
+```
+
+### [packer.nvim](https://github.com/wbthomason/packer.nvim)
+
+```lua
+use({ "leissa/nvim-swap" })
+```
+
+### [vim-plug](https://github.com/junegunn/vim-plug)
+
+```vim
+Plug 'leissa/nvim-swap'
+```
+
+### Without a manager
+
+```
+git clone https://github.com/leissa/nvim-swap \
+  ~/.local/share/nvim/site/pack/plugins/start/nvim-swap
+```
 
 ## Keys
 
@@ -109,7 +139,7 @@ Unmapped by default:
 
 ```lua
 {
-  "machakann/nvim-swap",
+  "leissa/nvim-swap",
   opts = {
     keymaps = { textobject_i = "i,", textobject_a = "a," },
   },
