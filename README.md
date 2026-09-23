@@ -1,6 +1,6 @@
 # nvim-swap
 
-[![tests](https://img.shields.io/github/actions/workflow/status/leissa/nvim-swap/test.yml?branch=master&label=tests)](https://github.com/leissa/nvim-swap/actions/workflows/test.yml)
+[![tests](https://img.shields.io/github/actions/workflow/status/leissa/nvim-swap/test.yml?branch=master&label=tests&logo=github)](https://github.com/leissa/nvim-swap/actions/workflows/test.yml)
 
 Reorder delimited items — arguments, parameters, list elements, table fields —
 without cutting and pasting. A Lua and tree-sitter rewrite of
