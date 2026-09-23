@@ -1,0 +1,38 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        neovim: [stable, nightly]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.neovim }}
+
+      - name: Install tree-sitter parsers
+        run: |
+          mkdir -p ~/.local/share/nvim/site/pack/test/start
+          git clone --depth 1 https://github.com/nvim-treesitter/nvim-treesitter \
+            ~/.local/share/nvim/site/pack/test/start/nvim-treesitter
+          nvim --headless -c 'TSInstallSync! c lua python rust json bash' -c 'qa'
+
+      - run: make test
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: JohnnyMorganz/stylua-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: latest
+          args: --check lua plugin tests

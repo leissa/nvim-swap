@@ -1,0 +1,225 @@
+*swap.txt*	Reorder delimited items, driven by tree-sitter
+
+Author:  a Lua and tree-sitter rewrite of vim-swap by machakann
+License: same as Neovim
+
+==============================================================================
+CONTENTS					*swap-contents*
+
+1. Introduction				|swap-introduction|
+2. Mappings				|swap-mappings|
+3. Swap mode				|swap-mode|
+4. Text objects				|swap-text-objects|
+5. How items are found			|swap-items|
+6. Configuration			|swap-configuration|
+7. Highlight groups			|swap-highlight-groups|
+8. Lua API				|swap-api|
+
+==============================================================================
+1. INTRODUCTION					*swap-introduction* *nvim-swap*
+
+Swapping two arguments of a call is a cut-and-paste chore, and an annoying one
+as soon as the two are not adjacent: >c
+	foo(alpha, beta, gamma);
+<
+With the cursor on "beta", |g<| makes that: >c
+	foo(beta, alpha, gamma);
+<
+The plugin finds the list around the cursor with tree-sitter, so what counts as
+an item is whatever the grammar of the language says it is. Requires Neovim
+0.11 or later. A parser is used when one is available; otherwise a bracket- and
+quote-aware scanner takes over, and the plugin still works in a plain text
+file.
+
+==============================================================================
+2. MAPPINGS					*swap-mappings*
+
+						*swap-g<* *<Plug>(swap-prev)*
+g<			Swap the item under the cursor with the previous one.
+			Takes a [count]: 3g< moves the item three places to the
+			left. Repeatable with |.|.
+
+						*swap-g>* *<Plug>(swap-next)*
+g>			Swap the item under the cursor with the next one.
+			Takes a [count]. Repeatable with |.|.
+
+					*swap-gs* *<Plug>(swap-interactive)*
+gs			Enter swap mode, see |swap-mode|. In |Visual-mode| the
+			selection is the list: a charwise selection is split on
+			delimiters, or on whitespace when it holds none, and a
+			linewise or |blockwise-visual| selection makes each
+			line an item. Repeatable with |.|, which replays what
+			the session did on the list under the cursor.
+
+To use different keys, set them in |swap.setup()|, or turn them off and map the
+|<Plug>| mappings yourself: >lua
+	require("swap").setup({ keymaps = { prev = false, next = false } })
+	vim.keymap.set("n", "<Leader>h", "<Plug>(swap-prev)")
+	vim.keymap.set("n", "<Leader>l", "<Plug>(swap-next)")
+<
+==============================================================================
+3. SWAP MODE					*swap-mode*
+
+|gs| highlights and numbers every item of the list and marks the one under the
+cursor, then reads keys until you leave: >
+	foo(1alpha, 2beta, 3gamma);
+<
+	h		Move the current item towards the front.
+	l		Move the current item towards the back.
+	j		Make the next item current.
+	k		Make the previous item current.
+	1 .. 9		Make the nth item current.
+	g		Group the current item with the next one. The group
+			then moves as a single item.
+	G		Split the last group again.
+	s		Sort the items, ascending.
+	S		Sort the items, descending.
+	r		Reverse the items.
+	u		Undo one step.
+	CTRL-R		Redo one step.
+	+		Use the enclosing list instead. With the cursor on "b"
+			in f(a, g(b, c), d), + switches from "b · c" to
+			"a · g(b, c) · d".
+	-		Go back to the list inside.
+	<Esc>, q	Leave swap mode.
+
+The whole session lands in the buffer as a single change, so one |u| afterwards
+undoes all of it.
+
+With `digits = "accumulate"` in |swap-configuration| a digit no longer selects
+an item at once. Digits are collected until <CR> confirms them and <BS>
+corrects them, which reaches lists longer than nine items.
+
+==============================================================================
+4. TEXT OBJECTS					*swap-text-objects*
+
+				*<Plug>(swap-textobject-i)* *<Plug>(swap-textobject-a)*
+Two text objects select swappable items. They are not mapped by default: >lua
+	require("swap").setup({
+	  keymaps = { textobject_i = "i,", textobject_a = "a," },
+	})
+<
+	i,		The item under the cursor.
+	a,		The item plus one delimiter, preferring the one in
+			front of it.
+
+Both take a [count] covering that many consecutive items, so `d2a,` deletes two
+arguments together with their commas.
+
+==============================================================================
+5. HOW ITEMS ARE FOUND				*swap-items*
+
+Starting at the cursor, the syntax tree is walked outwards until a node looks
+like a list. Three shapes are recognised, which between them cover most of what
+a grammar expresses:
+
+Separated lists ~
+A node whose children are separated by an anonymous "," or ";" token: argument
+lists, parameter lists, arrays, table constructors, object literals, the
+clauses of a C for-loop. Brackets end the list, so the body of that for-loop
+does not become a fourth clause. Where a grammar labels its children, the label
+tells items from the rest: in C's `int a, b;` the items are "a" and "b", not
+"int a" and "b".
+
+Operator chains ~
+`a + b + c` is parsed as nested two-operand nodes; a run of them sharing one
+operator is flattened into a single list of three items. Only associative
+operators are listed by default, since reordering the operands of `a - b` or
+`a < b` changes what the expression means.
+
+Whitespace lists ~
+Some nodes hold items with no separator token at all, such as the words of a
+shell command. These have to be named per language in `whitespace_nodes`,
+because otherwise any node with two named children — an "if" and its body —
+would look like a list.
+
+The innermost match wins, and |swap-mode| can widen the choice with "+".
+
+When tree-sitter finds nothing, or the buffer has no parser, the fallback
+scanner looks for the innermost bracket pair around the cursor and splits its
+contents on a delimiter, ignoring anything inside quotes or deeper brackets; if
+there is no such pair, it tries the current line.
+
+==============================================================================
+6. CONFIGURATION				*swap-configuration* *swap.setup()*
+
+Calling setup() is optional; it is only needed to change something. See the
+README for the defaults in full. >lua
+	require("swap").setup({
+	  keymaps = { prev = "g<", next = "g>", interactive = "gs" },
+	  treesitter = {
+	    separators = { ",", ";" },
+	    chains = { enabled = true },
+	  },
+	  highlight = { indices = true },
+	  swap_mode = {
+	    digits = "immediate",
+	    sort = function(a, b)
+	      return vim.trim(a) < vim.trim(b)
+	    end,
+	  },
+	})
+<
+A few things worth knowing:
+
+`treesitter.separators`	Keep this list short. A token such as "=" or ":" joins
+			an item to its value rather than separating two items,
+			and adding it would make `{ a = 1 }` look like a list
+			of "a" and "1".
+
+`fallback.whitespace`	Off by default. It would turn `int x = 1` into a list
+			of words in any buffer without a parser. A visual
+			selection always splits on whitespace, because there
+			the region is the one you picked.
+
+`swap_mode.keys`	Each command takes a list of keys, so it can have
+			several bindings; an empty list disables it.
+
+`swap_mode.sort`	Receives two item strings and returns true when the
+			first sorts before the second. To sort by length: >lua
+	swap_mode = {
+	  sort = function(a, b)
+	    return #a < #b
+	  end,
+	}
+<
+==============================================================================
+7. HIGHLIGHT GROUPS				*swap-highlight-groups*
+
+						*hl-SwapCurrentItem*
+SwapCurrentItem		The item under the cursor in swap mode. Linked to
+			|hl-IncSearch|.
+						*hl-SwapItem*
+SwapItem		The other items. Linked to Underlined.
+						*hl-SwapIndex*
+SwapIndex		The item numbers. Linked to |hl-LineNr|.
+
+Set `highlight.enabled = false` to turn the highlighting off, or
+`highlight.indices = false` to keep it without the numbers.
+
+==============================================================================
+8. LUA API					*swap-api*
+
+						*swap.region_at()*
+require("swap").region_at([bufnr, row, col])
+			The list around a position as a region object, or nil.
+			`row` and `col` are 0-based and default to the cursor.
+
+A region has `:count()`, `:swap(i, j)`, `:group(i)`, `:ungroup(i)`,
+`:sort(cmp, descending)`, `:reverse()`, `:index_at(row, col)` and `:apply()`,
+which writes the current order back to the buffer. Nothing reaches the buffer
+until `:apply()` is called: >lua
+	local region = require("swap").region_at()
+	if region then
+	  region:sort(function(a, b)
+	    return #a < #b
+	  end)
+	  region:apply()
+	end
+<
+						*swap.prev()* *swap.next()*
+						*swap.interactive()* *swap.visual()*
+These match the |<Plug>| mappings and only arm the operator, so they are of use
+inside a mapping that goes on to feed `g@`. Prefer the |<Plug>| mappings.
+
+ vim:tw=78:ts=8:noet:ft=help:norl:
