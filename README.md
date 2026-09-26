@@ -267,6 +267,10 @@ make test
 
 Runs on Neovim alone — no test framework to install.
 
+## Disclaimer
+
+This plugin was mostly created with the help of AI.
+
 ## Credits
 
 [machakann](https://github.com/machakann) for vim-swap, whose behaviour and key
