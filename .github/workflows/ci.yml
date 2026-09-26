@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pinned so a parser update does not silently change what the tests exercise.
+  NVIM_TREESITTER_REV: master
+  PARSERS: c lua python rust json bash
+
+jobs:
+  test:
+    name: test (${{ matrix.neovim }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest supported release, plus the two moving targets.
+        neovim: [v0.11.0, stable, nightly]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Neovim
+        uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.neovim }}
+
+      - name: Install the tree-sitter parsers
+        run: |
+          mkdir -p ~/.local/share/nvim/site/pack/test/start
+          git clone --depth 1 --branch "$NVIM_TREESITTER_REV" \
+            https://github.com/nvim-treesitter/nvim-treesitter \
+            ~/.local/share/nvim/site/pack/test/start/nvim-treesitter
+          nvim --headless -c "TSInstallSync! $PARSERS" -c 'qa'
+
+      - name: Run the test suite
+        run: make test
+
+  format:
+    name: format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: JohnnyMorganz/stylua-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: latest
+          args: --check lua plugin tests
+
+  doc:
+    name: doc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Neovim
+        uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: stable
+
+      - name: Generate the help tags
+        run: make doc

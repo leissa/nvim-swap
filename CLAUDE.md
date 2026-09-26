@@ -15,17 +15,20 @@ behaviour and the full default configuration; `doc/swap.txt` is the same in
 
 ```sh
 make test                  # whole suite: nvim --clean -l tests/run.lua
+make test SPEC=ts          # one spec: the value is the *_spec.lua basename
+make test SPEC='ts keys'
 make fmt                   # stylua lua plugin tests
 make fmt-check             # what CI enforces
-nvim -l tests/run.lua ts   # one spec: the argument is the *_spec.lua basename
-nvim -l tests/run.lua ts keys
+make doc                   # regenerate doc/tags
 make test NVIM=/path/to/nvim
+nvim -l tests/run.lua ts   # the same selection, without make
 ```
 
 Specs are `ts`, `keys`, `region`, `scan`, `config`. Tests that need a parser call
 `H.skip()` when it is missing, so a green run locally may have skipped the
-language cases — check the `skipped` count. CI installs the `c lua python rust
-json bash` parsers via nvim-treesitter and runs against Neovim stable and
+language cases — check the `skipped` count. CI (`.github/workflows/ci.yml`) runs
+three jobs — `test`, `format` and `doc` — installing the `c lua python rust json
+bash` parsers via nvim-treesitter and testing against Neovim 0.11, stable and
 nightly.
 
 `doc/tags` is generated (`:helptags doc`) and gitignored; regenerate rather than

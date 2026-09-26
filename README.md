@@ -1,6 +1,8 @@
 # nvim-swap
 
-[![tests](https://img.shields.io/github/actions/workflow/status/leissa/nvim-swap/test.yml?branch=master&label=tests&style=flat-square&logo=neovim&logoColor=white)](https://github.com/leissa/nvim-swap/actions/workflows/test.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/leissa/nvim-swap/ci.yml?branch=master&label=CI&logo=github&style=flat-square)](https://github.com/leissa/nvim-swap/actions/workflows/ci.yml)
+[![Neovim](https://img.shields.io/badge/Neovim-0.11%2B-57A143?logo=neovim&logoColor=white&style=flat-square)](https://neovim.io)
+[![Lua](https://img.shields.io/badge/made%20with-Lua-2C2D72?logo=lua&logoColor=white&style=flat-square)](https://www.lua.org)
 
 Reorder delimited items — arguments, parameters, list elements, table fields —
 without cutting and pasting. A Lua and tree-sitter rewrite of
@@ -261,11 +263,20 @@ end
 
 ## Tests
 
-```
-make test
+```sh
+make test              # the whole suite
+make test SPEC=ts      # one spec file
+make fmt-check         # what CI enforces
 ```
 
-Runs on Neovim alone — no test framework to install.
+The suite runs in a headless Neovim and brings its own runner
+(`tests/run.lua`), so there is nothing to install. The specs are `ts`, `keys`,
+`region`, `scan` and `config`; those that need a tree-sitter parser skip when
+it is missing, so check the `skipped` count before trusting a green run.
+
+CI runs the suite on Neovim 0.11, stable and nightly, with the `c`, `lua`,
+`python`, `rust`, `json` and `bash` parsers installed via
+[nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter).
 
 ## Disclaimer
 
