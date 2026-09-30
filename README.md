@@ -8,10 +8,25 @@ Reorder delimited items — arguments, parameters, list elements, table fields �
 without cutting and pasting. A Lua and tree-sitter rewrite of
 [vim-swap](https://github.com/machakann/vim-swap), for Neovim 0.11+.
 
-```c
-foo(alpha, beta, gamma);
-//         ^ cursor here, press g<
+**Press `gs` inside any list and you are in swap mode:** every item is numbered
+and highlighted, and single keys move, sort, reverse and group them — or hop out
+to the enclosing list with `+`. Leave with `q`; the whole session is one undo
+step, and `.` replays it on the next list.
 
+```c
+foo(gamma, alpha, beta);   // cursor on gamma, press gs
+foo(alpha, gamma, beta);   // l   move gamma right
+foo(alpha, beta, gamma);   // l   and once more
+foo(gamma, beta, alpha);   // r   reverse the list
+foo(alpha, beta, gamma);   // s   sort it
+                           // q   done; a single u undoes all of it
+```
+
+For a quick one-off, `g<` and `g>` swap the item under the cursor with its
+neighbour — no mode, just a count and `.`:
+
+```c
+foo(alpha, beta, gamma);   // cursor on beta, press g<
 foo(beta, alpha, gamma);
 ```
 
